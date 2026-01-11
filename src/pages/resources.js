@@ -7,6 +7,7 @@ const baseStyles = {
     fontFamily: "Inter, sans-serif",
     backgroundColor: "#f9f8f3",
     minHeight: "100vh",
+    boxSizing: "border-box", // include padding in width
   },
   heading: { fontSize: "32px", fontWeight: "700", marginBottom: "25px" },
   form: {
@@ -15,6 +16,8 @@ const baseStyles = {
     borderRadius: "12px",
     marginBottom: "40px",
     boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
+    maxWidth: "100%",
+    boxSizing: "border-box", // ensures inputs stay inside
   },
   input: {
     width: "100%",
@@ -23,6 +26,7 @@ const baseStyles = {
     borderRadius: "6px",
     border: "1px solid #ccc",
     fontSize: "14px",
+    boxSizing: "border-box", // ✅ key fix
   },
   button: {
     background: "#4a5d23",
@@ -32,13 +36,14 @@ const baseStyles = {
     borderRadius: "6px",
     fontWeight: "600",
     cursor: "pointer",
+    boxSizing: "border-box",
   },
   tableContainer: {
     overflowX: "auto", // allows horizontal scroll on small screens
   },
   table: {
     width: "100%",
-    minWidth: "600px", // ensures table doesn't shrink too much
+    minWidth: "600px",
     background: "#fff",
     borderCollapse: "collapse",
     borderRadius: "12px",
@@ -71,7 +76,6 @@ export default function AdminResourcesPanel() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ===== Fetch all resources =====
   const fetchResources = async () => {
     try {
       const res = await fetch(`${BASE_URL}/all`);
@@ -84,9 +88,7 @@ export default function AdminResourcesPanel() {
     }
   };
 
-  useEffect(() => {
-    fetchResources();
-  }, []);
+  useEffect(() => { fetchResources(); }, []);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const handleFileChange = (e) => {
@@ -110,19 +112,13 @@ export default function AdminResourcesPanel() {
     try {
       let res, data;
       if (editingId) {
-        res = await fetch(`${BASE_URL}/update/${editingId}`, {
-          method: "PUT",
-          body: formData,
-        });
+        res = await fetch(`${BASE_URL}/update/${editingId}`, { method: "PUT", body: formData });
         if (!res.ok) throw new Error("Failed to update resource");
         data = await res.json();
         setResources(resources.map((r) => (r.id === editingId ? data : r)));
         setEditingId(null);
       } else {
-        res = await fetch(`${BASE_URL}/add`, {
-          method: "POST",
-          body: formData,
-        });
+        res = await fetch(`${BASE_URL}/add`, { method: "POST", body: formData });
         if (!res.ok) throw new Error("Failed to add resource");
         data = await res.json();
         setResources([data, ...resources]);
@@ -154,7 +150,7 @@ export default function AdminResourcesPanel() {
   // ===== Responsive adjustments =====
   const responsiveContainer = {
     ...baseStyles.container,
-    padding: windowWidth < 600 ? "20px 10px" : "50px",
+    padding: windowWidth < 400 ? "10px 8px" : windowWidth < 600 ? "20px 10px" : "50px",
   };
   const responsiveHeading = {
     ...baseStyles.heading,
@@ -163,6 +159,8 @@ export default function AdminResourcesPanel() {
   const responsiveForm = {
     ...baseStyles.form,
     padding: windowWidth < 600 ? "15px" : "25px",
+    maxWidth: "100%",
+    boxSizing: "border-box",
   };
   const responsiveButton = {
     ...baseStyles.button,
@@ -186,32 +184,9 @@ export default function AdminResourcesPanel() {
           {RESOURCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
 
-        <input
-          name="title"
-          placeholder="Title"
-          value={form.title}
-          onChange={handleChange}
-          style={baseStyles.input}
-          required
-        />
-
-        <textarea
-          name="description"
-          placeholder="Description"
-          value={form.description}
-          onChange={handleChange}
-          style={baseStyles.input}
-          required
-        />
-
-        <input
-          type="file"
-          accept=".pdf,.doc,.docx"
-          onChange={handleFileChange}
-          style={baseStyles.input}
-          required={!editingId}
-        />
-
+        <input name="title" placeholder="Title" value={form.title} onChange={handleChange} style={baseStyles.input} required />
+        <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} style={baseStyles.input} required />
+        <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} style={baseStyles.input} required={!editingId} />
         <button style={responsiveButton}>{editingId ? "Update Resource" : "Add Resource"}</button>
       </form>
 
@@ -227,11 +202,7 @@ export default function AdminResourcesPanel() {
             </tr>
           </thead>
           <tbody>
-            {resources.length === 0 && (
-              <tr>
-                <td colSpan="5" style={responsiveTd}>No resources added yet</td>
-              </tr>
-            )}
+            {resources.length === 0 && <tr><td colSpan="5" style={responsiveTd}>No resources added yet</td></tr>}
             {resources.map((res) => (
               <tr key={res.id}>
                 <td style={responsiveTd}>{res.type}</td>
@@ -239,28 +210,14 @@ export default function AdminResourcesPanel() {
                 <td style={responsiveTd}>{res.description}</td>
                 <td style={responsiveTd}>
                   {res.file_url && (
-                    <a
-                      href={res.file_url}
-                      download
-                      style={{ color: "#4a5d23", textDecoration: "underline", cursor: "pointer", fontSize: windowWidth < 600 ? "12px" : "14px" }}
-                    >
+                    <a href={res.file_url} download style={{ color: "#4a5d23", textDecoration: "underline", cursor: "pointer", fontSize: windowWidth < 600 ? "12px" : "14px" }}>
                       {res.file_url.split("/").pop()}
                     </a>
                   )}
                 </td>
                 <td style={responsiveTd}>
-                  <button
-                    style={{ ...baseStyles.actionBtn, background: "#e5e7eb" }}
-                    onClick={() => handleEdit(res)}
-                  >
-                    ✏ Edit
-                  </button>
-                  <button
-                    style={{ ...baseStyles.actionBtn, background: "#fee2e2" }}
-                    onClick={() => handleDelete(res.id)}
-                  >
-                    🗑 Delete
-                  </button>
+                  <button style={{ ...baseStyles.actionBtn, background: "#e5e7eb" }} onClick={() => handleEdit(res)}>✏ Edit</button>
+                  <button style={{ ...baseStyles.actionBtn, background: "#fee2e2" }} onClick={() => handleDelete(res.id)}>🗑 Delete</button>
                 </td>
               </tr>
             ))}
