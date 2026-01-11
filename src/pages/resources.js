@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 /* ================= STYLES ================= */
-const styles = {
+const baseStyles = {
   container: {
     padding: "50px",
     fontFamily: "Inter, sans-serif",
@@ -33,8 +33,12 @@ const styles = {
     fontWeight: "600",
     cursor: "pointer",
   },
+  tableContainer: {
+    overflowX: "auto", // allows horizontal scroll on small screens
+  },
   table: {
     width: "100%",
+    minWidth: "600px", // ensures table doesn't shrink too much
     background: "#fff",
     borderCollapse: "collapse",
     borderRadius: "12px",
@@ -59,6 +63,13 @@ export default function AdminResourcesPanel() {
   const [resources, setResources] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ type: "", title: "", description: "", file: null });
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // ===== Fetch all resources =====
   const fetchResources = async () => {
@@ -77,7 +88,6 @@ export default function AdminResourcesPanel() {
     fetchResources();
   }, []);
 
-  // ===== Handle input changes =====
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -85,7 +95,6 @@ export default function AdminResourcesPanel() {
     setForm({ ...form, file });
   };
 
-  // ===== Submit form (Add / Update) =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.type || !form.title || !form.description || (!form.file && !editingId)) {
@@ -125,13 +134,11 @@ export default function AdminResourcesPanel() {
     }
   };
 
-  // ===== Edit resource =====
   const handleEdit = (res) => {
     setForm({ type: res.type, title: res.title, description: res.description, file: null });
     setEditingId(res.id);
   };
 
-  // ===== Delete resource =====
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this resource?")) return;
     try {
@@ -144,15 +151,37 @@ export default function AdminResourcesPanel() {
     }
   };
 
-  return (
-    <div style={styles.container}>
-      <h1 style={styles.heading}>Resources Admin Panel</h1>
+  // ===== Responsive adjustments =====
+  const responsiveContainer = {
+    ...baseStyles.container,
+    padding: windowWidth < 600 ? "20px 10px" : "50px",
+  };
+  const responsiveHeading = {
+    ...baseStyles.heading,
+    fontSize: windowWidth < 600 ? "24px" : "32px",
+  };
+  const responsiveForm = {
+    ...baseStyles.form,
+    padding: windowWidth < 600 ? "15px" : "25px",
+  };
+  const responsiveButton = {
+    ...baseStyles.button,
+    padding: windowWidth < 600 ? "8px 12px" : "10px 18px",
+    fontSize: windowWidth < 600 ? "14px" : "16px",
+  };
+  const responsiveTd = {
+    ...baseStyles.td,
+    fontSize: windowWidth < 600 ? "12px" : "14px",
+  };
 
-      {/* ===== Add / Edit Form ===== */}
-      <form style={styles.form} onSubmit={handleSubmit}>
+  return (
+    <div style={responsiveContainer}>
+      <h1 style={responsiveHeading}>Resources Admin Panel</h1>
+
+      <form style={responsiveForm} onSubmit={handleSubmit}>
         <h3>{editingId ? "Edit Resource" : "Add New Resource"}</h3>
 
-        <select name="type" value={form.type} onChange={handleChange} style={styles.input} required>
+        <select name="type" value={form.type} onChange={handleChange} style={baseStyles.input} required>
           <option value="">Select Resource Type</option>
           {RESOURCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
@@ -162,7 +191,7 @@ export default function AdminResourcesPanel() {
           placeholder="Title"
           value={form.title}
           onChange={handleChange}
-          style={styles.input}
+          style={baseStyles.input}
           required
         />
 
@@ -171,7 +200,7 @@ export default function AdminResourcesPanel() {
           placeholder="Description"
           value={form.description}
           onChange={handleChange}
-          style={styles.input}
+          style={baseStyles.input}
           required
         />
 
@@ -179,64 +208,65 @@ export default function AdminResourcesPanel() {
           type="file"
           accept=".pdf,.doc,.docx"
           onChange={handleFileChange}
-          style={styles.input}
+          style={baseStyles.input}
           required={!editingId}
         />
 
-        <button style={styles.button}>{editingId ? "Update Resource" : "Add Resource"}</button>
+        <button style={responsiveButton}>{editingId ? "Update Resource" : "Add Resource"}</button>
       </form>
 
-      {/* ===== Resources Table ===== */}
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}>Type</th>
-            <th style={styles.th}>Title</th>
-            <th style={styles.th}>Description</th>
-            <th style={styles.th}>File</th>
-            <th style={styles.th}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {resources.length === 0 && (
+      <div style={baseStyles.tableContainer}>
+        <table style={baseStyles.table}>
+          <thead>
             <tr>
-              <td colSpan="5" style={styles.td}>No resources added yet</td>
+              <th style={baseStyles.th}>Type</th>
+              <th style={baseStyles.th}>Title</th>
+              <th style={baseStyles.th}>Description</th>
+              <th style={baseStyles.th}>File</th>
+              <th style={baseStyles.th}>Actions</th>
             </tr>
-          )}
-          {resources.map((res) => (
-            <tr key={res.id}>
-              <td style={styles.td}>{res.type}</td>
-              <td style={styles.td}>{res.title}</td>
-              <td style={styles.td}>{res.description}</td>
-              <td style={styles.td}>
-                {res.file_url && (
-                  <a
-                    href={res.file_url}
-                    download
-                    style={{ color: "#4a5d23", textDecoration: "underline", cursor: "pointer" }}
+          </thead>
+          <tbody>
+            {resources.length === 0 && (
+              <tr>
+                <td colSpan="5" style={responsiveTd}>No resources added yet</td>
+              </tr>
+            )}
+            {resources.map((res) => (
+              <tr key={res.id}>
+                <td style={responsiveTd}>{res.type}</td>
+                <td style={responsiveTd}>{res.title}</td>
+                <td style={responsiveTd}>{res.description}</td>
+                <td style={responsiveTd}>
+                  {res.file_url && (
+                    <a
+                      href={res.file_url}
+                      download
+                      style={{ color: "#4a5d23", textDecoration: "underline", cursor: "pointer", fontSize: windowWidth < 600 ? "12px" : "14px" }}
+                    >
+                      {res.file_url.split("/").pop()}
+                    </a>
+                  )}
+                </td>
+                <td style={responsiveTd}>
+                  <button
+                    style={{ ...baseStyles.actionBtn, background: "#e5e7eb" }}
+                    onClick={() => handleEdit(res)}
                   >
-                    {res.file_url.split("/").pop()}
-                  </a>
-                )}
-              </td>
-              <td style={styles.td}>
-                <button
-                  style={{ ...styles.actionBtn, background: "#e5e7eb" }}
-                  onClick={() => handleEdit(res)}
-                >
-                  ✏ Edit
-                </button>
-                <button
-                  style={{ ...styles.actionBtn, background: "#fee2e2" }}
-                  onClick={() => handleDelete(res.id)}
-                >
-                  🗑 Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                    ✏ Edit
+                  </button>
+                  <button
+                    style={{ ...baseStyles.actionBtn, background: "#fee2e2" }}
+                    onClick={() => handleDelete(res.id)}
+                  >
+                    🗑 Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
