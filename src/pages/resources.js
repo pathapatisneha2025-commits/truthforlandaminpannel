@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 
 /* ================= STYLES ================= */
 const styles = {
@@ -61,11 +60,13 @@ export default function AdminResourcesPanel() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ type: "", title: "", description: "", file: null });
 
-  // ===== Fetch all resources from backend =====
+  // ===== Fetch all resources =====
   const fetchResources = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/all`);
-      setResources(res.data);
+      const res = await fetch(`${BASE_URL}/all`);
+      if (!res.ok) throw new Error("Failed to fetch resources");
+      const data = await res.json();
+      setResources(data);
     } catch (err) {
       console.error(err);
       alert("Failed to fetch resources");
@@ -76,7 +77,7 @@ export default function AdminResourcesPanel() {
     fetchResources();
   }, []);
 
-  // ===== Handle form input changes =====
+  // ===== Handle input changes =====
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -84,7 +85,7 @@ export default function AdminResourcesPanel() {
     setForm({ ...form, file });
   };
 
-  // ===== Submit form =====
+  // ===== Submit form (Add / Update) =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.type || !form.title || !form.description || (!form.file && !editingId)) {
@@ -98,19 +99,29 @@ export default function AdminResourcesPanel() {
     if (form.file) formData.append("file", form.file);
 
     try {
+      let res, data;
       if (editingId) {
-        const res = await axios.put(`${BASE_URL}/update/${editingId}`, formData);
-        setResources(resources.map((r) => (r.id === editingId ? res.data : r)));
+        res = await fetch(`${BASE_URL}/update/${editingId}`, {
+          method: "PUT",
+          body: formData,
+        });
+        if (!res.ok) throw new Error("Failed to update resource");
+        data = await res.json();
+        setResources(resources.map((r) => (r.id === editingId ? data : r)));
         setEditingId(null);
       } else {
-        const res = await axios.post(`${BASE_URL}/add`, formData);
-        setResources([res.data, ...resources]);
+        res = await fetch(`${BASE_URL}/add`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) throw new Error("Failed to add resource");
+        data = await res.json();
+        setResources([data, ...resources]);
       }
-
       setForm({ type: "", title: "", description: "", file: null });
     } catch (err) {
       console.error(err);
-      alert("Failed to save resource");
+      alert(err.message);
     }
   };
 
@@ -124,11 +135,12 @@ export default function AdminResourcesPanel() {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this resource?")) return;
     try {
-      await axios.delete(`${BASE_URL}/delete/${id}`);
+      const res = await fetch(`${BASE_URL}/delete/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete resource");
       setResources(resources.filter((r) => r.id !== id));
     } catch (err) {
       console.error(err);
-      alert("Failed to delete resource");
+      alert(err.message);
     }
   };
 
@@ -136,7 +148,7 @@ export default function AdminResourcesPanel() {
     <div style={styles.container}>
       <h1 style={styles.heading}>Resources Admin Panel</h1>
 
-      {/* ===== ADD / EDIT FORM ===== */}
+      {/* ===== Add / Edit Form ===== */}
       <form style={styles.form} onSubmit={handleSubmit}>
         <h3>{editingId ? "Edit Resource" : "Add New Resource"}</h3>
 
@@ -174,13 +186,13 @@ export default function AdminResourcesPanel() {
         <button style={styles.button}>{editingId ? "Update Resource" : "Add Resource"}</button>
       </form>
 
-      {/* ===== LIST TABLE ===== */}
+      {/* ===== Resources Table ===== */}
       <table style={styles.table}>
         <thead>
           <tr>
             <th style={styles.th}>Type</th>
             <th style={styles.th}>Title</th>
-            <th style={styles.th}>Description</th> {/* Added Description */}
+            <th style={styles.th}>Description</th>
             <th style={styles.th}>File</th>
             <th style={styles.th}>Actions</th>
           </tr>
@@ -192,37 +204,36 @@ export default function AdminResourcesPanel() {
             </tr>
           )}
           {resources.map((res) => (
-         <tr key={res.id}>
-  <td style={styles.td}>{res.type}</td>
-  <td style={styles.td}>{res.title}</td>
-  <td style={styles.td}>{res.description}</td>
-  <td style={styles.td}>
-    {res.file_url && (
-      <a
-        href={res.file_url}
-        download
-        style={{ color: "#4a5d23", textDecoration: "underline", cursor: "pointer" }}
-      >
-        {res.file_url.split("/").pop()}
-      </a>
-    )}
-  </td>
-  <td style={styles.td}>
-    <button
-      style={{ ...styles.actionBtn, background: "#e5e7eb" }}
-      onClick={() => handleEdit(res)}
-    >
-      ✏ Edit
-    </button>
-    <button
-      style={{ ...styles.actionBtn, background: "#fee2e2" }}
-      onClick={() => handleDelete(res.id)}
-    >
-      🗑 Delete
-    </button>
-  </td>
-</tr>
-
+            <tr key={res.id}>
+              <td style={styles.td}>{res.type}</td>
+              <td style={styles.td}>{res.title}</td>
+              <td style={styles.td}>{res.description}</td>
+              <td style={styles.td}>
+                {res.file_url && (
+                  <a
+                    href={res.file_url}
+                    download
+                    style={{ color: "#4a5d23", textDecoration: "underline", cursor: "pointer" }}
+                  >
+                    {res.file_url.split("/").pop()}
+                  </a>
+                )}
+              </td>
+              <td style={styles.td}>
+                <button
+                  style={{ ...styles.actionBtn, background: "#e5e7eb" }}
+                  onClick={() => handleEdit(res)}
+                >
+                  ✏ Edit
+                </button>
+                <button
+                  style={{ ...styles.actionBtn, background: "#fee2e2" }}
+                  onClick={() => handleDelete(res.id)}
+                >
+                  🗑 Delete
+                </button>
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>
