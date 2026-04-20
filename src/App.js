@@ -4,6 +4,8 @@ import AdminResourcesPanel from "./pages/resources";
 import AdminLayout from "./components/Adminlayout";
 import AdminLogin from "./pages/adminlogin";
 import AdminForgotPassword from "./pages/forgotpassword";
+import AdminBlogPanel from "./pages/Blogs";
+
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
         <Route path="/admin" element={<AdminLayout />}>
           {/* ✅ relative path */}
           <Route path="resources" element={<AdminResourcesPanel />} />
+           <Route path="blogs" element={<AdminBlogPanel />} />
+
         </Route>
 
         {/* 404 */}

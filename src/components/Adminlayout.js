@@ -156,6 +156,10 @@ export default function AdminLayout() {
               📄 Resources
             </NavLink>
 
+              <NavLink to="/admin/blogs" onClick={handleLinkClick}>
+              📄 Blogs
+            </NavLink>
+
             {/* Add more later if needed */}
             {/* <NavLink to="/admin/blogs" onClick={handleLinkClick}>
               📝 Blogs
@@ -163,7 +167,7 @@ export default function AdminLayout() {
           </div>
 
           <div className="logout" onClick={handleLogout}>
-            🚪 Logout
+          Logout
           </div>
         </aside>
 
